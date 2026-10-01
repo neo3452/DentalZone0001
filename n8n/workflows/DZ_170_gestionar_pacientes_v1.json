@@ -1,0 +1,492 @@
+{
+  "name": "DZ_170_gestionar_pacientes_v1",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "contact_id",
+              "type": "number"
+            },
+            {
+              "name": "nombre_paciente"
+            },
+            {
+              "name": "telefono"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -144,
+        16
+      ],
+      "id": "fa24ee02-1fa6-482e-9454-b24a998cdb64",
+      "name": "recibir_solicitud_paciente_dz"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "H3sukdr4Gnb1KgrA",
+          "mode": "list",
+          "cachedResultName": "DZ_pacientes_v1",
+          "cachedResultUrl": "/projects/gPN6XNL5O9TUKVm2/datatables/H3sukdr4Gnb1KgrA"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "contact_id",
+              "keyValue": "={{ $json.contact_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        352,
+        -112
+      ],
+      "id": "d85ad6f1-bb65-4691-b828-c9cb87152ad7",
+      "name": "consultar_paciente_por_contact_id_dz",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "1a089335-5458-48ad-8df8-924aa1ff90fa",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "number",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        560,
+        -112
+      ],
+      "id": "3ec250ca-6071-4702-90a7-2ca747179a90",
+      "name": "validar_paciente_existente_dz",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "jsCode": "const entrada =\n  $('recibir_solicitud_paciente_dz')\n    .first()\n    .json;\n\nconst contactIdTexto =\n  String(\n    entrada.contact_id ?? ''\n  ).trim();\n\nlet contactId = null;\n\nif (contactIdTexto !== '') {\n  const valor =\n    Number(\n      entrada.contact_id\n    );\n\n  if (\n    !Number.isSafeInteger(valor) ||\n    valor <= 0\n  ) {\n    throw new Error(\n      'DZ_PACIENTE_CONTACT_ID_INVALIDO'\n    );\n  }\n\n  contactId = valor;\n}\n\nconst nombrePaciente =\n  String(\n    entrada.nombre_paciente ?? ''\n  ).trim();\n\nif (nombrePaciente === '') {\n  throw new Error(\n    'DZ_PACIENTE_NOMBRE_REQUERIDO'\n  );\n}\n\nconst telefonoOriginal =\n  String(\n    entrada.telefono ?? ''\n  ).trim();\n\nif (telefonoOriginal === '') {\n  throw new Error(\n    'DZ_PACIENTE_TELEFONO_REQUERIDO'\n  );\n}\n\nlet digitos =\n  telefonoOriginal.replace(\n    /\\D/g,\n    ''\n  );\n\nif (digitos.length === 8) {\n  digitos =\n    `502${digitos}`;\n}\n\nif (\n  digitos.length !== 11 ||\n  !digitos.startsWith('502')\n) {\n  throw new Error(\n    'DZ_PACIENTE_TELEFONO_INVALIDO'\n  );\n}\n\nreturn [\n  {\n    json: {\n      contact_id:\n        contactId,\n\n      nombre_paciente:\n        nombrePaciente,\n\n      telefono:\n        `+${digitos}`,\n\n      calificacion_cliente:\n        10,\n\n      paciente_activo:\n        true,\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        752,
+        32
+      ],
+      "id": "b1206c2a-8751-4879-9b4b-7427fac25b46",
+      "name": "preparar_alta_paciente_dz"
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "value": "H3sukdr4Gnb1KgrA",
+          "mode": "list",
+          "cachedResultName": "DZ_pacientes_v1",
+          "cachedResultUrl": "/projects/gPN6XNL5O9TUKVm2/datatables/H3sukdr4Gnb1KgrA"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "paciente_activo": true,
+            "paciente_id": "={{ null }}",
+            "contact_id": "={{ $json.contact_id }}",
+            "nombre_paciente": "={{ $json.nombre_paciente }}",
+            "telefono": "={{ $json.telefono }}",
+            "calificacion_cliente": "={{ $json.calificacion_cliente }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "paciente_id",
+              "displayName": "paciente_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "nombre_paciente",
+              "displayName": "nombre_paciente",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "telefono",
+              "displayName": "telefono",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "contact_id",
+              "displayName": "contact_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "calificacion_cliente",
+              "displayName": "calificacion_cliente",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "paciente_activo",
+              "displayName": "paciente_activo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        960,
+        32
+      ],
+      "id": "509a7004-7a43-4a1d-a37a-80dedfd0cd51",
+      "name": "insertar_paciente_nuevo_dz"
+    },
+    {
+      "parameters": {
+        "jsCode": "const paciente = $input.first().json;\n\nconst id = Number(paciente.id);\n\nif (!Number.isInteger(id) || id <= 0) {\n  throw new Error('DZ_PACIENTE_ID_INTERNO_INVALIDO');\n}\n\nreturn [\n  {\n    json: {\n      ...paciente,\n      paciente_id: `DZ-${String(id).padStart(6, '0')}`,\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1152,
+        -128
+      ],
+      "id": "4a4f0d5d-f913-44b5-856b-71048920103d",
+      "name": "preparar_paciente_id_dz"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "value": "H3sukdr4Gnb1KgrA",
+          "mode": "list",
+          "cachedResultName": "DZ_pacientes_v1",
+          "cachedResultUrl": "/projects/gPN6XNL5O9TUKVm2/datatables/H3sukdr4Gnb1KgrA"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyValue": "={{ $json.id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "paciente_id": "={{ $json.paciente_id }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "paciente_id",
+              "displayName": "paciente_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "nombre_paciente",
+              "displayName": "nombre_paciente",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "telefono",
+              "displayName": "telefono",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "contact_id",
+              "displayName": "contact_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "calificacion_cliente",
+              "displayName": "calificacion_cliente",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "paciente_activo",
+              "displayName": "paciente_activo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1376,
+        32
+      ],
+      "id": "f794bf10-12fc-4b8d-a7e0-66f5f7e91440",
+      "name": "guardar_paciente_id_dz"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ Number.isSafeInteger(Number($json.contact_id)) && Number($json.contact_id) > 0 }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    },
+                    "id": "6f12ceb4-478a-47c2-a5f0-927bb82edba4"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "con_contacto"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "0bd7354b-143f-4aae-837d-0ad2b5ef323a",
+                    "leftValue": "={{ Number.isSafeInteger(Number($json.contact_id)) && Number($json.contact_id) > 0 }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "false",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "sin_contacto"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        80,
+        16
+      ],
+      "id": "b0e8f558-1413-45de-adf4-170cf900bb05",
+      "name": "enrutar_origen_identidad_paciente_dz"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "recibir_solicitud_paciente_dz": {
+      "main": [
+        [
+          {
+            "node": "enrutar_origen_identidad_paciente_dz",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "consultar_paciente_por_contact_id_dz": {
+      "main": [
+        [
+          {
+            "node": "validar_paciente_existente_dz",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "validar_paciente_existente_dz": {
+      "main": [
+        [
+          {
+            "node": "preparar_paciente_id_dz",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "preparar_alta_paciente_dz",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "preparar_alta_paciente_dz": {
+      "main": [
+        [
+          {
+            "node": "insertar_paciente_nuevo_dz",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "insertar_paciente_nuevo_dz": {
+      "main": [
+        [
+          {
+            "node": "preparar_paciente_id_dz",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "preparar_paciente_id_dz": {
+      "main": [
+        [
+          {
+            "node": "guardar_paciente_id_dz",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "enrutar_origen_identidad_paciente_dz": {
+      "main": [
+        [
+          {
+            "node": "consultar_paciente_por_contact_id_dz",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "preparar_alta_paciente_dz",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "ec1d21d4-b676-4c00-beb8-af3cde48a615",
+  "meta": {
+    "instanceId": "3d665cf07efdc2a8a11301cf04ed7a4cd4220c85bc05f36012bb0d8176813349"
+  },
+  "nodeGroups": [],
+  "id": "1tungcWphbrhhXq8",
+  "tags": []
+}

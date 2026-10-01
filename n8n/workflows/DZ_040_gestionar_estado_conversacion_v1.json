@@ -1,0 +1,488 @@
+{
+  "name": "DZ_040_gestionar_estado_conversacion_v1",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "accion"
+            },
+            {
+              "name": "chatwoot_id",
+              "type": "number"
+            },
+            {
+              "name": "conversation_id"
+            },
+            {
+              "name": "contact_id",
+              "type": "number"
+            },
+            {
+              "name": "inbox_id",
+              "type": "number"
+            },
+            {
+              "name": "nombre_cliente"
+            },
+            {
+              "name": "telefono_cliente"
+            },
+            {
+              "name": "ultimo_message_id",
+              "type": "number"
+            },
+            {
+              "name": "ultimo_contacto_at"
+            },
+            {
+              "name": "motivo_transferencia"
+            },
+            {
+              "name": "proceso_activo"
+            },
+            {
+              "name": "paso_activo"
+            },
+            {
+              "name": "context",
+              "type": "object"
+            },
+            {
+              "name": "contexto_json"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "4ac73f0f-a5f1-4fcc-af3f-05dc7345049c",
+      "name": "recibir_operacion_estado_conversacion_dz"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.accion }}",
+                    "rightValue": "registrar_mensaje",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "146d3262-1d64-4359-a415-df999ce1b653"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "registrar_mensaje"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "2ed180da-d98c-4a2e-bb78-5250b59c444f",
+                    "leftValue": "={{ $json.accion }}",
+                    "rightValue": "activar_transferencia",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "activar_transferencia"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "2cc32087-cda3-4ddf-bc66-e4677155837e",
+                    "leftValue": "={{ $json.accion }}",
+                    "rightValue": "actualizar_proceso",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "actualizar_proceso"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "4da7dc73-a11c-40f8-baf5-12eea3350510",
+                    "leftValue": "={{ $json.accion }}",
+                    "rightValue": "abrir_confirmacion_cita",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "abrir_confirmacion_cita"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "operacion_no_soportada"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        208,
+        0
+      ],
+      "id": "dd22a1d4-dcbd-457e-82b5-a600fc7414a6",
+      "name": "enrutar_operacion_estado_dz"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH estado_guardado AS (\n  INSERT INTO dz.conversaciones_estado AS actual (\n    chatwoot_id,\n    conversation_id,\n    contact_id,\n    inbox_id,\n    nombre_cliente,\n    telefono_cliente,\n    ultimo_message_id,\n    ultimo_contacto_at\n  )\n  VALUES (\n    $1::bigint,\n    $2::text,\n    $3::bigint,\n    $4::bigint,\n    $5::text,\n    $6::text,\n    $7::bigint,\n    $8::timestamptz\n  )\n  ON CONFLICT (chatwoot_id)\n  DO UPDATE SET\n    conversation_id = EXCLUDED.conversation_id,\n    contact_id = EXCLUDED.contact_id,\n    inbox_id = EXCLUDED.inbox_id,\n    nombre_cliente = COALESCE(\n      NULLIF(EXCLUDED.nombre_cliente, ''),\n      actual.nombre_cliente\n    ),\n    telefono_cliente = COALESCE(\n      NULLIF(EXCLUDED.telefono_cliente, ''),\n      actual.telefono_cliente\n    ),\n    ultimo_message_id = EXCLUDED.ultimo_message_id,\n    ultimo_contacto_at = GREATEST(\n      actual.ultimo_contacto_at,\n      EXCLUDED.ultimo_contacto_at\n    ),\n    version = actual.version + 1\n  WHERE EXCLUDED.ultimo_message_id > actual.ultimo_message_id\n  RETURNING *\n)\nSELECT *\nFROM estado_guardado\n\nUNION ALL\n\nSELECT *\nFROM dz.conversaciones_estado\nWHERE chatwoot_id = $1::bigint\n  AND NOT EXISTS (\n    SELECT 1\n    FROM estado_guardado\n  )\n\nLIMIT 1;",
+        "options": {
+          "queryReplacement": "=={{ [  $json.chatwoot_id,  $json.conversation_id,  $json.contact_id,  $json.inbox_id,  $json.nombre_cliente,  $json.telefono_cliente,  $json.ultimo_message_id,  $json.ultimo_contacto_at] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        384,
+        -304
+      ],
+      "id": "9a74f146-3d6d-46c8-96ff-4bd276055783",
+      "name": "registrar_y_consultar_estado_dz",
+      "credentials": {
+        "postgres": {
+          "id": "LKkV0RALcT5BwuYI",
+          "name": "DZ_PostgreSQL_DentalZone"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "errorMessage": "=={{ `DZ_OPERACION_ESTADO_NO_SOPORTADA: ${$json.accion}` }}"
+      },
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [
+        448,
+        432
+      ],
+      "id": "a9faad68-2226-4ba0-9cdc-dfd9f8bbd958",
+      "name": "rechazar_operacion_estado_no_soportada_dz"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH estado_actualizado AS (\n  UPDATE dz.conversaciones_estado\n  SET\n    estado_sofia = 'transferencia_activa',\n    motivo_transferencia = $2::text,\n    proceso_activo = NULL,\n    paso_activo = NULL,\n    version = version + 1\n  WHERE chatwoot_id = $1::bigint\n    AND (\n      estado_sofia IS DISTINCT FROM 'transferencia_activa'\n      OR motivo_transferencia IS DISTINCT FROM $2::text\n    )\n  RETURNING *\n)\nSELECT *\nFROM estado_actualizado\n\nUNION ALL\n\nSELECT *\nFROM dz.conversaciones_estado\nWHERE chatwoot_id = $1::bigint\n  AND NOT EXISTS (\n    SELECT 1\n    FROM estado_actualizado\n  )\n\nLIMIT 1;",
+        "options": {
+          "queryReplacement": "={{ [   $json.chatwoot_id,   $json.motivo_transferencia ] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        736,
+        -224
+      ],
+      "id": "89cde3c8-836a-40d2-b17c-59c98be9e80c",
+      "name": "activar_transferencia_y_consultar_estado_dz",
+      "alwaysOutputData": true,
+      "executeOnce": false,
+      "retryOnFail": false,
+      "credentials": {
+        "postgres": {
+          "id": "LKkV0RALcT5BwuYI",
+          "name": "DZ_PostgreSQL_DentalZone"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const salida = $input.first()?.json ?? {};\n\nconst entrada =\n  $('recibir_operacion_estado_conversacion_dz')\n    .first()\n    .json;\n\nif (\n  salida.chatwoot_id === undefined ||\n  salida.chatwoot_id === null\n) {\n  throw new Error(\n    'DZ_ESTADO_CONVERSACION_NO_ENCONTRADO'\n  );\n}\n\nif (salida.estado_sofia !== 'transferencia_activa') {\n  throw new Error(\n    'DZ_TRANSFERENCIA_NO_PERSISTIDA'\n  );\n}\n\nif (\n  salida.motivo_transferencia !==\n  entrada.motivo_transferencia\n) {\n  throw new Error(\n    'DZ_MOTIVO_TRANSFERENCIA_NO_PERSISTIDO'\n  );\n}\n\nreturn [{ json: salida }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        944,
+        -224
+      ],
+      "id": "6a67a4b5-9843-45f1-89e8-dcd615adec74",
+      "name": "validar_transferencia_persistida_dz"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH actualizado AS (\n  UPDATE dz.conversaciones_estado\n  SET\n    proceso_activo = $2::text,\n    paso_activo = $3::text,\n    contexto = $4::jsonb,\n    version = version + 1\n  WHERE chatwoot_id = $1::bigint\n    AND ultimo_message_id = $5::bigint\n    AND ROW(\n      proceso_activo,\n      paso_activo,\n      contexto\n    ) IS DISTINCT FROM ROW(\n      $2::text,\n      $3::text,\n      $4::jsonb\n    )\n  RETURNING *\n)\nSELECT *\nFROM actualizado\n\nUNION ALL\n\nSELECT actual.*\nFROM dz.conversaciones_estado AS actual\nWHERE actual.chatwoot_id = $1::bigint\n  AND actual.ultimo_message_id = $5::bigint\n  AND NOT EXISTS (\n    SELECT 1\n    FROM actualizado\n  )\n\nLIMIT 1;",
+        "options": {
+          "queryReplacement": "={{ [\n  $json.chatwoot_id,\n  $json.proceso_activo,\n  $json.paso_activo,\n  $json.contexto_json,\n  $json.ultimo_message_id\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        752,
+        48
+      ],
+      "id": "b1e98800-be70-49f4-ad23-8fa9c7447970",
+      "name": "actualizar_proceso_estado_dz",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "LKkV0RALcT5BwuYI",
+          "name": "DZ_PostgreSQL_DentalZone"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const salida = $input.first()?.json ?? {};\n\nconst entrada =\n  $('serializar_contexto_proceso_dz')\n    .first()\n    .json;\n\nfunction normalizarObjeto(valor) {\n  if (Array.isArray(valor)) {\n    return valor.map(normalizarObjeto);\n  }\n\n  if (\n    valor !== null &&\n    typeof valor === 'object'\n  ) {\n    return Object.keys(valor)\n      .sort()\n      .reduce((resultado, clave) => {\n        resultado[clave] =\n          normalizarObjeto(valor[clave]);\n\n        return resultado;\n      }, {});\n  }\n\n  return valor;\n}\n\nif (\n  Number(salida.chatwoot_id) !==\n  Number(entrada.chatwoot_id)\n) {\n  throw new Error(\n    'DZ_ACTUALIZACION_PROCESO_NO_APLICADA'\n  );\n}\n\nif (\n  Number(salida.ultimo_message_id) !==\n  Number(entrada.ultimo_message_id)\n) {\n  throw new Error(\n    'DZ_ACTUALIZACION_PROCESO_MESSAGE_ID_OBSOLETO'\n  );\n}\n\nif (\n  salida.proceso_activo !==\n  entrada.proceso_activo\n) {\n  throw new Error(\n    'DZ_ACTUALIZACION_PROCESO_INCONSISTENTE'\n  );\n}\n\nif (\n  salida.paso_activo !==\n  entrada.paso_activo\n) {\n  throw new Error(\n    'DZ_ACTUALIZACION_PASO_INCONSISTENTE'\n  );\n}\n\nconst contextoGuardado = JSON.stringify(\n  normalizarObjeto(salida.contexto)\n);\n\nconst contextoSolicitado = JSON.stringify(\n  normalizarObjeto(\n    JSON.parse(entrada.contexto_json)\n  )\n);\n\nif (contextoGuardado !== contextoSolicitado) {\n  throw new Error(\n    'DZ_ACTUALIZACION_CONTEXTO_INCONSISTENTE'\n  );\n}\n\nif (\n  !Number.isSafeInteger(Number(salida.version)) ||\n  Number(salida.version) <= 0\n) {\n  throw new Error(\n    'DZ_ACTUALIZACION_PROCESO_VERSION_INVALIDA'\n  );\n}\n\nreturn [{ json: salida }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        48
+      ],
+      "id": "60d707ed-0023-40b3-bdf8-386253e50ce5",
+      "name": "validar_actualizacion_proceso_estado_dz"
+    },
+    {
+      "parameters": {
+        "jsCode": "const entrada = $input.first()?.json ?? {};\n\nfunction normalizarEstadoProceso(\n  valor,\n  codigoError\n) {\n  if (\n    valor === null ||\n    valor === undefined\n  ) {\n    return null;\n  }\n\n  if (typeof valor !== 'string') {\n    throw new Error(codigoError);\n  }\n\n  const valorNormalizado = valor.trim();\n\n  return valorNormalizado === ''\n    ? null\n    : valorNormalizado;\n}\n\nif (\n  typeof entrada.contexto_json !== 'string' ||\n  entrada.contexto_json.trim() === ''\n) {\n  throw new Error(\n    'DZ_CONTEXTO_PROCESO_JSON_AUSENTE'\n  );\n}\n\nlet contexto;\n\ntry {\n  contexto = JSON.parse(\n    entrada.contexto_json\n  );\n} catch {\n  throw new Error(\n    'DZ_CONTEXTO_PROCESO_JSON_INVALIDO'\n  );\n}\n\nif (\n  contexto === null ||\n  Array.isArray(contexto) ||\n  typeof contexto !== 'object'\n) {\n  throw new Error(\n    'DZ_CONTEXTO_PROCESO_INVALIDO'\n  );\n}\n\nconst proceso_activo =\n  normalizarEstadoProceso(\n    entrada.proceso_activo,\n    'DZ_PROCESO_ACTIVO_INVALIDO'\n  );\n\nconst paso_activo =\n  normalizarEstadoProceso(\n    entrada.paso_activo,\n    'DZ_PASO_ACTIVO_INVALIDO'\n  );\n\nreturn [\n  {\n    json: {\n      ...entrada,\n      proceso_activo,\n      paso_activo,\n      contexto,\n      contexto_json:\n        JSON.stringify(contexto),\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        528,
+        48
+      ],
+      "id": "4773fd56-5b5c-4f41-8769-21c7907106d8",
+      "name": "serializar_contexto_proceso_dz"
+    },
+    {
+      "parameters": {
+        "jsCode": "const entrada = $input.first()?.json ?? {};\n\nif (\n  entrada.accion !==\n  'abrir_confirmacion_cita'\n) {\n  throw new Error(\n    'DZ_APERTURA_CONFIRMACION_ACCION_INVALIDA'\n  );\n}\n\nif (\n  !Number.isSafeInteger(\n    Number(entrada.chatwoot_id)\n  ) ||\n  Number(entrada.chatwoot_id) <= 0\n) {\n  throw new Error(\n    'DZ_APERTURA_CONFIRMACION_CHATWOOT_ID_INVALIDO'\n  );\n}\n\nif (\n  typeof entrada.conversation_id !== 'string' ||\n  entrada.conversation_id.trim() === ''\n) {\n  throw new Error(\n    'DZ_APERTURA_CONFIRMACION_CONVERSATION_ID_INVALIDO'\n  );\n}\n\nif (\n  entrada.proceso_activo !== 'gestion_cita'\n) {\n  throw new Error(\n    'DZ_APERTURA_CONFIRMACION_PROCESO_INVALIDO'\n  );\n}\n\nif (\n  entrada.paso_activo !==\n  'confirmar_cita_paciente'\n) {\n  throw new Error(\n    'DZ_APERTURA_CONFIRMACION_PASO_INVALIDO'\n  );\n}\n\nconst contexto = entrada.context;\n\nif (\n  contexto === null ||\n  Array.isArray(contexto) ||\n  typeof contexto !== 'object'\n) {\n  throw new Error(\n    'DZ_APERTURA_CONFIRMACION_CONTEXTO_INVALIDO'\n  );\n}\n\nconst gestionCita =\n  contexto.gestion_cita;\n\nif (\n  gestionCita === null ||\n  Array.isArray(gestionCita) ||\n  typeof gestionCita !== 'object'\n) {\n  throw new Error(\n    'DZ_APERTURA_CONFIRMACION_GESTION_CITA_INVALIDA'\n  );\n}\n\nif (\n  gestionCita.origen !==\n  'confirmacion_cita'\n) {\n  throw new Error(\n    'DZ_APERTURA_CONFIRMACION_ORIGEN_INVALIDO'\n  );\n}\n\nif (\n  typeof gestionCita.cita_id !== 'string' ||\n  gestionCita.cita_id.trim() === ''\n) {\n  throw new Error(\n    'DZ_APERTURA_CONFIRMACION_CITA_ID_INVALIDO'\n  );\n}\n\nif (\n  gestionCita.estado_confirmacion !==\n  'solicitada'\n) {\n  throw new Error(\n    'DZ_APERTURA_CONFIRMACION_ESTADO_INVALIDO'\n  );\n}\n\nreturn [\n  {\n    json: {\n      ...entrada,\n      chatwoot_id:\n        Number(entrada.chatwoot_id),\n      conversation_id:\n        entrada.conversation_id.trim(),\n      contexto,\n      contexto_json:\n        JSON.stringify(contexto),\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        528,
+        272
+      ],
+      "id": "67c660a6-b4b1-46e4-8e24-2a9ab231288d",
+      "name": "validar_apertura_confirmacion_cita_dz"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH actualizado AS (\n  UPDATE dz.conversaciones_estado\n  SET\n    proceso_activo = $3::text,\n    paso_activo = $4::text,\n    contexto =\n  (\n    COALESCE(contexto, '{}'::jsonb)\n    || COALESCE($5::jsonb, '{}'::jsonb)\n  )\n  || jsonb_build_object(\n    'gestion_cita',\n    COALESCE(\n      contexto -> 'gestion_cita',\n      '{}'::jsonb\n    )\n    ||\n    COALESCE(\n      $5::jsonb -> 'gestion_cita',\n      '{}'::jsonb\n    )\n  ),\n    version = version + 1\n  WHERE chatwoot_id = $1::bigint\n    AND conversation_id = $2::text\n    AND (\n      (\n        proceso_activo IS NULL\n        AND paso_activo IS NULL\n      )\n      OR\n      (\n        proceso_activo = $3::text\n        AND paso_activo = $4::text\n        AND contexto\n          -> 'gestion_cita'\n          ->> 'cita_id'\n          =\n          $5::jsonb\n          -> 'gestion_cita'\n          ->> 'cita_id'\n      )\n    )\n  RETURNING *\n)\nSELECT *\nFROM actualizado\n\nUNION ALL\n\nSELECT actual.*\nFROM dz.conversaciones_estado AS actual\nWHERE actual.chatwoot_id = $1::bigint\n  AND actual.conversation_id = $2::text\n  AND actual.proceso_activo = $3::text\n  AND actual.paso_activo = $4::text\n  AND actual.contexto\n    -> 'gestion_cita'\n    ->> 'cita_id'\n    =\n    $5::jsonb\n    -> 'gestion_cita'\n    ->> 'cita_id'\n  AND NOT EXISTS (\n    SELECT 1\n    FROM actualizado\n  )\n\nLIMIT 1;",
+        "options": {
+          "queryReplacement": "={{ [   $json.chatwoot_id,   $json.conversation_id,   $json.proceso_activo,   $json.paso_activo,   $json.contexto_json ] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        800,
+        272
+      ],
+      "id": "12463bd2-22bc-4636-ad12-e82146ec0bfb",
+      "name": "abrir_confirmacion_cita_estado_dz",
+      "credentials": {
+        "postgres": {
+          "id": "LKkV0RALcT5BwuYI",
+          "name": "DZ_PostgreSQL_DentalZone"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const salida = $input.first()?.json ?? {};\n\nconst entrada =\n  $('validar_apertura_confirmacion_cita_dz')\n    .first()\n    .json;\n\nfunction normalizarObjeto(valor) {\n  if (Array.isArray(valor)) {\n    return valor.map(normalizarObjeto);\n  }\n\n  if (\n    valor !== null &&\n    typeof valor === 'object'\n  ) {\n    return Object.keys(valor)\n      .sort()\n      .reduce((resultado, clave) => {\n        resultado[clave] =\n          normalizarObjeto(valor[clave]);\n\n        return resultado;\n      }, {});\n  }\n\n  return valor;\n}\n\nif (\n  Number(salida.chatwoot_id) !==\n  Number(entrada.chatwoot_id)\n) {\n  throw new Error(\n    'DZ_APERTURA_CONFIRMACION_NO_APLICADA'\n  );\n}\n\nif (\n  salida.conversation_id !==\n  entrada.conversation_id\n) {\n  throw new Error(\n    'DZ_APERTURA_CONFIRMACION_CONVERSACION_INCONSISTENTE'\n  );\n}\n\nif (\n  salida.proceso_activo !==\n  entrada.proceso_activo\n) {\n  throw new Error(\n    'DZ_APERTURA_CONFIRMACION_PROCESO_INCONSISTENTE'\n  );\n}\n\nif (\n  salida.paso_activo !==\n  entrada.paso_activo\n) {\n  throw new Error(\n    'DZ_APERTURA_CONFIRMACION_PASO_INCONSISTENTE'\n  );\n}\n\nconst contextoGuardado =\n  JSON.stringify(\n    normalizarObjeto(salida.contexto)\n  );\n\nconst contextoSolicitado =\n  JSON.stringify(\n    normalizarObjeto(entrada.contexto)\n  );\n\nif (\n  contextoGuardado !==\n  contextoSolicitado\n) {\n  throw new Error(\n    'DZ_APERTURA_CONFIRMACION_CONTEXTO_INCONSISTENTE'\n  );\n}\n\nif (\n  !Number.isSafeInteger(\n    Number(salida.version)\n  ) ||\n  Number(salida.version) <= 0\n) {\n  throw new Error(\n    'DZ_APERTURA_CONFIRMACION_VERSION_INVALIDA'\n  );\n}\n\nreturn [\n  {\n    json: salida,\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1056,
+        272
+      ],
+      "id": "b1612799-ffe5-424a-89a5-263184896e01",
+      "name": "validar_apertura_confirmacion_persistida_dz"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "recibir_operacion_estado_conversacion_dz": {
+      "main": [
+        [
+          {
+            "node": "enrutar_operacion_estado_dz",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "enrutar_operacion_estado_dz": {
+      "main": [
+        [
+          {
+            "node": "registrar_y_consultar_estado_dz",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "activar_transferencia_y_consultar_estado_dz",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "serializar_contexto_proceso_dz",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "validar_apertura_confirmacion_cita_dz",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "rechazar_operacion_estado_no_soportada_dz",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "activar_transferencia_y_consultar_estado_dz": {
+      "main": [
+        [
+          {
+            "node": "validar_transferencia_persistida_dz",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "actualizar_proceso_estado_dz": {
+      "main": [
+        [
+          {
+            "node": "validar_actualizacion_proceso_estado_dz",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "serializar_contexto_proceso_dz": {
+      "main": [
+        [
+          {
+            "node": "actualizar_proceso_estado_dz",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "validar_apertura_confirmacion_cita_dz": {
+      "main": [
+        [
+          {
+            "node": "abrir_confirmacion_cita_estado_dz",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "validar_apertura_confirmacion_persistida_dz": {
+      "main": [
+        []
+      ]
+    },
+    "abrir_confirmacion_cita_estado_dz": {
+      "main": [
+        [
+          {
+            "node": "validar_apertura_confirmacion_persistida_dz",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "89770e8f-005c-4e45-825b-5a20e3432b5e",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "3d665cf07efdc2a8a11301cf04ed7a4cd4220c85bc05f36012bb0d8176813349"
+  },
+  "nodeGroups": [],
+  "id": "GHX6tURSLUM3wWBL",
+  "tags": []
+}
